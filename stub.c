@@ -15,6 +15,7 @@ int has_appended_zip(wchar_t *filename)
     HANDLE hMapFile;
     HANDLE hFile;
     LPVOID lpMapAddress;
+    const char *start;
     const char *end;
     unsigned int comment_len;
     int ret = 0;
@@ -44,12 +45,15 @@ int has_appended_zip(wchar_t *filename)
         goto exit;
     }
 
-    end = ((const char *)lpMapAddress) + dwFileSize;
+    start = ((const char *)lpMapAddress);
+    end = start + dwFileSize;
 
     for (comment_len = 0; comment_len <= 0xFFFF; ++comment_len) {
         unsigned int sigpos = comment_len + 22;
         unsigned int clpos = comment_len + 2;
         unsigned int cl;
+        if (end-sigpos < start)
+            break;
         if (memcmp(end-sigpos, end_cdr_sig, 4) != 0)
             continue;
         cl = (end-clpos)[0] + ((end-clpos)[1] << 8);
