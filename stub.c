@@ -1,5 +1,6 @@
 /* Executable wrapper for a Python application */
 
+#define Py_LIMITED_API 1
 #include "Python.h"
 
 #define WIN32_LEAN_AND_MEAN
