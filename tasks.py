@@ -25,6 +25,10 @@ def build(ctx):
     compile("stub.c")
 
 @task
+def build2(ctx):
+    compile("stub2.c")
+
+@task
 def clean(ctx):
     ctx.run('del *.exe')
     ctx.run('del *.obj')
