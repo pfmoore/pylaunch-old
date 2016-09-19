@@ -34,6 +34,10 @@ CAVEATS
 -------
 
 * This isn't very well tested yet. There *will* be bugs.
+* The launcher chooses the GUI script if the launcher name ends in
+  "w", but doesn't check if it's actually the GUI version of the
+  launcher. It's up to the user to use the right version, and name
+  it appropriately.
 * Your script will see the launcher as ```sys.executable```. This is
   correct, but may confuse programs or libraries that assume that
   ```sys.executable``` is the Python interpreter.
