@@ -1,6 +1,34 @@
 A simple Python launcher
 ========================
 
+The zastub launcher
+-------------------
+
+The zastub launcher is purely for prepending to a zipapp style
+archive (as created with the Python zipapp stdlib module). To use,
+simply make a binary copy of the launcher with the pyz file appended.
+In cmd.exe you can do this with
+
+    copy /b zastub.exe+myapp.pyz myapp.exe
+
+The resulting executable will run your application, as long as there
+is a version of Python (specifically, python3.dll) on your PATH.
+
+To bundle your application as a standalone package, just download and
+unpack the "embedded" Python distribution for your architecture from
+python,org, and drop your bundled application in the directory containing
+the distribution.
+
+To build the zastub launcher, you need the appropriate version of Visual
+C for your Python build (VS 2015 for Python 3.5/3.6) - community edition
+is fine. Then simply run build_zastub.py to build.
+
+There are 2 executables generated, zastub.exe for console applications
+(pyz archives) and zastubw.exe for GUI applications (pyzw archives).
+
+The stub launcher
+-----------------
+
 This is a very simple launcher for Python scripts.
 
 The launcher will locate a Python program, and run that passing
@@ -40,4 +68,6 @@ CAVEATS
   it appropriately.
 * Your script will see the launcher as ```sys.executable```. This is
   correct, but may confuse programs or libraries that assume that
-  ```sys.executable``` is the Python interpreter.
+  ```sys.executable``` is the Python interpreter. In particular, I
+  believe the stdlib ```multiprocessing``` module might not handle
+  this correctly (although I hven't tested this).
