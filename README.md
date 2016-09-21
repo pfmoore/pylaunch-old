@@ -44,13 +44,17 @@ Types of script handled are:
 The script name must be the same as the basename of the launcher.
 If the launcher name ends in "w", the "w" is removed before locating
 the script (the "w" indicates the GUI version of the launcher) and
-the "w" form of the script extension is checked for.
+the "w" form of the script extension is checked for. Note that whether
+to use the "w" version is based purely on the launcher name, no check
+is made that the "w" launcher is actually a GUI executable. So if you
+want a GUI command that doesn't end in "w" you can simply rename the
+launcher and not use the "w" form of script name.
 
 The script is found based on the following priority:
 
 1. Appended zip
 2. Standalone zipapp (extension ```.pyz[w]```)
-3. Standalone script
+3. Standalone script (extension ```.py[w]```)
 4. Standalone zipapp (extension ```.zip```)
 
 You can save a number of launchers with their associated scripts
@@ -62,12 +66,12 @@ CAVEATS
 -------
 
 * This isn't very well tested yet. There *will* be bugs.
-* The launcher chooses the GUI script if the launcher name ends in
-  "w", but doesn't check if it's actually the GUI version of the
-  launcher. It's up to the user to use the right version, and name
-  it appropriately.
 * Your script will see the launcher as ```sys.executable```. This is
   correct, but may confuse programs or libraries that assume that
-  ```sys.executable``` is the Python interpreter. In particular, I
-  believe the stdlib ```multiprocessing``` module might not handle
-  this correctly (although I hven't tested this).
+  ```sys.executable``` is the Python interpreter.
+* As a consequence of the previous point, if your code uses the
+  ```multiprocessing``` module, you need to use
+  ```multiprocessing.set_executable``` to provide the location of
+  a suitable Python executable. See 
+  https://docs.python.org/3.6/library/multiprocessing.html#multiprocessing.set_executable
+  for details.
