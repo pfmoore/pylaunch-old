@@ -1,11 +1,13 @@
-/* Alternative stub.
+/* Launcher for multiple stubs.
  *
  * Runs a function named after the executable, from the module
- * named "stubs" located on sys.path (typically in the same
- * directory as the executable).
+ * named "stubs" located on sys.path.
  *
- * TODO: Probable bug here, as we shouldn't rely on sys.path
- * having the right directory in it.
+ * NOTE: Generally, you can put the "stubs" module next to the
+ * launcher, as Python adds sys.exec_prefix to sys.path. This is
+ * normal even for the embedded distribution. But in unusual
+ * cases, you may need to make specific provision to put the
+ * stubs module somewhere Python can find it.
  */
 #define Py_LIMITED_API 1
 #include <Python.h>

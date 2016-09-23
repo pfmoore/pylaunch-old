@@ -26,6 +26,20 @@ is fine. Then simply run build_zastub.py to build.
 There are 2 executables generated, zastub.exe for console applications
 (pyz archives) and zastubw.exe for GUI applications (pyzw archives).
 
+The multistub launcher
+----------------------
+
+The multistub launcher can be used to host multiple stubs from a single
+directory. The launcher will locate a function to run by importing a
+"stubs" module and looking for an attribute named the same as the
+launcher. The launcher will call that attribute.
+
+Typically, "stubs" will be a Python file in the same directory
+as the launcher(s), but it is possible to locate it anywhere on sys.path.
+
+As usual, there are 2 launchers, a console one and a GUI one. Their
+behaviours are identical.
+
 The stub launcher
 -----------------
 
@@ -66,6 +80,7 @@ CAVEATS
 -------
 
 * This isn't very well tested yet. There *will* be bugs.
+* Error handling is minimal.
 * Your script will see the launcher as ```sys.executable```. This is
   correct, but may confuse programs or libraries that assume that
   ```sys.executable``` is the Python interpreter.

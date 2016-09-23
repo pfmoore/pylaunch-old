@@ -23,10 +23,8 @@ def compile(src):
 @task
 def build(ctx):
     compile("stub.c")
-
-@task
-def build2(ctx):
-    compile("stub2.c")
+    compile("multistub.c")
+    compile("zastub.c")
 
 @task
 def clean(ctx):
