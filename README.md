@@ -23,8 +23,46 @@ To build the zastub launcher, you need the appropriate version of Visual
 C for your Python build (VS 2015 for Python 3.5/3.6) - community edition
 is fine. Then simply run build_zastub.py to build.
 
-There are 2 executables generated, zastub.exe for console applications
-(pyz archives) and zastubw.exe for GUI applications (pyzw archives).
+Console vs GUI applications
+---------------------------
+
+The launcher executables come in 2 variations, one suffixed with a "w"
+and the other without. The "w" variation should be used for GUI
+applications, and the "non-w" variation should be used for console
+applications. This is exactly the same convention as used by the Python
+interpreter itself (```python``` and ```pythonw``` commands).
+
+Putting the embedded Python distribution in a subdirectory
+----------------------------------------------------------
+
+The launchers normally locate Python by looking for the interpreter DLL,
+```python3.dll```, on the user's PATH. Additionally, as noted above,
+Python 3.5+ comes with an "embedded" distribution, which can be unpacked
+in the same directory as the application exe, and which will then be used
+in preference to the any other Python installation on the machine. This
+allows for completely standalone distribution of your application.
+
+It is not always ideal to have the Python distribution in your main
+application directory (for example, if you need to add your application
+directory to the user's PATH, you may not want to expose the embedded
+Python DLLs and exes). By using Windows "side by side assembly" feature,
+it is possible to put the embedded distribution in a subdirectory. To
+do this, you must take the following steps:
+
+1. Take the supplied ```py3embed``` directory, and the ```py3embed.manifest```
+   file contained within it, and copy them to your application directory.
+   **You must use the name py3embed, as the manifests are based on name,
+   and you cannot use a different name without changing the manifest
+   embedded in the exe.**
+2. Unpack the Python 3.6 embedded distribution into the py3embed
+   directory.
+3. Use the version of the launcher with an "m" suffix (```zalaunchm.exe```
+   or ```zalaunchmw.exe```).
+
+It is possible to use versions of Python other than 3.6, however you will
+need to change the dll names in ```py3embed.manifest```. Also, the Python
+3.5 embedded distribution has some limitations when used in this way, and
+so is not supported.
 
 The multistub launcher
 ----------------------
@@ -37,16 +75,19 @@ launcher. The launcher will call that attribute.
 Typically, "stubs" will be a Python file in the same directory
 as the launcher(s), but it is possible to locate it anywhere on sys.path.
 
-As usual, there are 2 launchers, a console one and a GUI one. Their
-behaviours are identical.
+There are 2 launchers, a console one and a GUI one.
 
-The stub launcher
------------------
+In practice, there is little advantage to this form of the launcher, and
+it is mainly provided as a proof of concept for alternative approaches.
 
-This is a very simple launcher for Python scripts.
+The genstub launcher
+--------------------
 
-The launcher will locate a Python program, and run that passing
-on the arguments used to invoke the launcher.
+The launcher will locate a Python program, and run that passing on the
+arguments used to invoke the launcher. It searches for the Python program in a
+number of locations. Although in principle this adds flexibility, in practice
+this is rarely needed and adds complexity, and so again this variant is
+provided simply  as a proof of concept.
 
 Types of script handled are:
 

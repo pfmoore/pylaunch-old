@@ -18,13 +18,13 @@ def compile(src):
     # Now the GUI executable
     cc.define_macro('WINDOWS')
     objs = cc.compile([str(src)])
-    cc.link_executable(objs, exe + 'w')
+    cc.link_executable(objs, exe + 'w',
+        extra_postargs=['/SUBSYSTEM:WINDOWS'])
 
 @task
 def build(ctx):
     compile("stub.c")
     compile("multistub.c")
-    compile("zastub.c")
 
 @task
 def clean(ctx):

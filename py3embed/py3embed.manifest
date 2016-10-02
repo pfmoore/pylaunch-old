@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+    <assemblyIdentity name="py3embed"
+                      version="3.6.111.1013"
+                      type="win32"
+                      processorArchitecture="amd64" />
+    <file name="python3.dll" />
+    <file name="python36.dll" />
+    <file name="vcruntime140.dll" />
+</assembly>
