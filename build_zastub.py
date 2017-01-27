@@ -21,6 +21,9 @@ def compile(src):
     cc.add_include_dir(distutils.sysconfig.get_python_inc())
     cc.add_library_dir(os.path.join(sys.base_exec_prefix, 'libs'))
 
+    # Include the Python 3.6.0 workaround
+    cc.define_macro('PY360_WORKAROUND')
+
     # First the CLI executable
     objs = cc.compile([str(src)])
     cc.link_executable(objs, exe)
