@@ -1,2 +1,9 @@
 *.exe
 *.obj
+# Must specify all of these explicitly, as we want to track py3embed/py3embed.manifest
+py3embed/*.dll
+py3embed/*.pyd
+py3embed/*.txt
+py3embed/*.exe
+py3embed/*._pth
+py3embed/*.zip
