@@ -24,7 +24,7 @@
   <dependency>
     <dependentAssembly>
       <assemblyIdentity name="py3embed"
-                        version="3.6.111.1013"
+                        version="1.0.0.0"
                         type="win32"
                         processorArchitecture="amd64" />
     </dependentAssembly>
