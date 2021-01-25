@@ -8,7 +8,7 @@
 
 #define SCRIPT_DIR L"scripts"
 #define PYTHON_DIR L"python\\"
-#define PYTHON_DLL PYTHON_DIR L"python3*.dll"
+#define PYTHON_DLL PYTHON_DIR L"python3.dll"
 #define PYTHON_EXE PYTHON_DIR L"python.exe"
 
 void error(wchar_t *fmt, ...) {
@@ -50,67 +50,22 @@ void error(wchar_t *fmt, ...) {
     exit(1);
 }
 
-wchar_t *search_python_dll(wchar_t *dirname, wchar_t *pattern) {
-    wchar_t *dll_pattern;
-    HRESULT hr = PathAllocCombine(
-        dirname, pattern,
-        PATHCCH_ALLOW_LONG_PATHS, &dll_pattern
-    );
-    if (hr != S_OK) {
-        error(L"Could not construct Python DLL pattern");
-    }
-    WIN32_FIND_DATAW find_data;
-    fwprintf(stderr, L"DLL pattern: %ls\n", dll_pattern);
-    HANDLE h = FindFirstFileW(dll_pattern, &find_data);
-    if (h == INVALID_HANDLE_VALUE) {
-        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
-            /* Nothing matches */
-            LocalFree(dll_pattern);
-            return 0;
-        }
-        error(L"Could not match DLL filename pattern");
-    }
-
-    /* Re-use dll_pattern as the directory the DLL is in.
-     * Note that the pattern may have been something like
-     * "python/python*.dll", so we can't just use dirname.
-     */
-    /* NOTE: This doesn't handle forward slashes in filenames! */
-    PathCchRemoveFileSpec(dll_pattern, wcslen(dll_pattern) + 1);
-    fwprintf(stderr, L"DLL pattern: %ls\n", dll_pattern);
-    do {
-        /* Skip the stable ABI DLL, as we can't load symbols from it.
-         * See https://bugs.python.org/issue43022 for details.
-         */
-        if (_wcsicmp(find_data.cFileName, L"python3.dll") == 0) {
-            continue;
-        }
-
-        wchar_t *dll_name;
-        HRESULT hr = PathAllocCombine(dll_pattern, find_data.cFileName, PATHCCH_ALLOW_LONG_PATHS, &dll_name);
-        if (hr != S_OK) {
-            error(L"Could not construct Python DLL name");
-        }
-        fwprintf(stderr, L"Trying DLL name %ls\n", dll_name);
-        return dll_name;
-    } while (FindNextFileW(h, &find_data));
-    LocalFree(dll_pattern);
-    if (GetLastError() != ERROR_NO_MORE_FILES) {
-        error(L"Search for Python DLL failed");
-    }
-    FindClose(h);
-    return 0;
-}
-
 typedef int (*Py_Main_t)(int argc, wchar_t **argv);
 
 Py_Main_t get_pymain(wchar_t *base_dir) {
-    wchar_t *dll_path = search_python_dll(base_dir, PYTHON_DLL);
-    if (dll_path == 0) {
-        error(L"Could not find Python DLL");
+    wchar_t *dll_path;
+    HRESULT hr = PathAllocCombine(
+        base_dir, PYTHON_DLL,
+        PATHCCH_ALLOW_LONG_PATHS, &dll_path
+    );
+    if (hr != S_OK) {
+        error(L"Could not construct Python DLL path");
     }
 
-    HMODULE py_dll = LoadLibraryW(dll_path);
+    /* See https://bugs.python.org/issue43022, we need
+     * these flags to load the stable ABI.
+     */
+    HMODULE py_dll = LoadLibraryExW(dll_path, 0, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
     if (!py_dll) {
         error(L"Could not load Python DLL %ls", dll_path);
     }
