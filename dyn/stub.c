@@ -16,8 +16,9 @@ void error(wchar_t *fmt, ...) {
     va_start(args, fmt);
     int err = 0;
     wchar_t *err_msg = 0;
+    size_t n = 0;
     if (err) {
-        size_t n = FormatMessageW(
+        n = FormatMessageW(
             FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_ALLOCATE_BUFFER,
             0,
             err,
@@ -28,11 +29,12 @@ void error(wchar_t *fmt, ...) {
         );
     }
 #ifdef WINDOWS
+#define BUFSIZE 2000
     wchar_t *buf = _alloca(BUFSIZE + n + 10);
     int ret = vswprintf(buf, BUFSIZE, fmt, args);
     if (err) {
-        wcscat(buf, L":\n");
-        wcscat(buf, err_msg);
+        _wcscat(buf, L":\n");
+        _wcscat(buf, err_msg);
         LocalFree(err_msg);
     }
     MessageBoxW(0, buf, L"Python script launcher", MB_OK);
