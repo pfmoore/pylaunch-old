@@ -7,14 +7,11 @@
 #include <stdio.h>
 
 #define SCRIPT_DIR L"scripts"
-#define PYTHON_DIR L"python\\"
-#define PYTHON_DLL PYTHON_DIR L"python3.dll"
-#define PYTHON_EXE PYTHON_DIR L"python.exe"
+#define PYTHON_DIR L"python"
+#define PYTHON_DLL L"python3.dll"
+#define PYTHON_EXE L"python.exe"
 
-void error(wchar_t *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    int err = 0;
+void verror(int err, wchar_t *fmt, va_list args) {
     wchar_t *err_msg = 0;
     size_t n = 0;
     if (err) {
@@ -29,12 +26,12 @@ void error(wchar_t *fmt, ...) {
         );
     }
 #ifdef WINDOWS
-#define BUFSIZE 2000
-    wchar_t *buf = _alloca(BUFSIZE + n + 10);
-    int ret = vswprintf(buf, BUFSIZE, fmt, args);
+#define MAX_MESSAGE_LEN 2000
+    wchar_t *buf = _alloca(MAX_MESSAGE_LEN + n + 10);
+    int ret = vswprintf(buf, MAX_MESSAGE_LEN, fmt, args);
     if (err) {
-        _wcscat(buf, L":\n");
-        _wcscat(buf, err_msg);
+        wcscat(buf, L":\n");
+        wcscat(buf, err_msg);
         LocalFree(err_msg);
     }
     MessageBoxW(0, buf, L"Python script launcher", MB_OK);
@@ -50,60 +47,76 @@ void error(wchar_t *fmt, ...) {
     exit(1);
 }
 
+void error(wchar_t *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    verror(0, fmt, args);
+}
+
+void winerror(wchar_t *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    verror(GetLastError(), fmt, args);
+}
+
+wchar_t *make_path(const wchar_t *dir, const wchar_t *subdir, const wchar_t *basename, const wchar_t *ext) {
+    size_t dir_len = wcslen(dir);
+    size_t subdir_len = wcslen(subdir);
+    size_t basename_len = wcslen(basename);
+    size_t ext_len = wcslen(ext);
+    /* Three extra, two for the slashes, one for the terminating NUL */
+    size_t result_len = (dir_len + basename_len + ext_len + 2);
+    wchar_t *result = malloc(result_len * sizeof(wchar_t));
+    if (result == 0) {
+        error(L"Could not allocate memory for filename");
+    }
+    wchar_t *p = result;
+    memcpy(p, dir, dir_len * sizeof(wchar_t));
+    p += dir_len;
+    *p++ = L'\\';
+    if (subdir_len) {
+        memcpy(p, subdir, subdir_len * sizeof(wchar_t));
+        p += subdir_len;
+        *p++ = L'\\';
+    }
+    memcpy(p, basename, basename_len * sizeof(wchar_t));
+    p += basename_len;
+    if (ext_len) {
+        memcpy(p, ext, ext_len * sizeof(wchar_t));
+        p += ext_len;
+    }
+    *p = 0;
+    return result;
+}
+
 typedef int (*Py_Main_t)(int argc, wchar_t **argv);
 
 Py_Main_t get_pymain(wchar_t *base_dir) {
-    wchar_t *dll_path;
-    HRESULT hr = PathAllocCombine(
-        base_dir, PYTHON_DLL,
-        PATHCCH_ALLOW_LONG_PATHS, &dll_path
-    );
-    if (hr != S_OK) {
-        error(L"Could not construct Python DLL path");
-    }
+    wchar_t *dll_path = make_path(base_dir, PYTHON_DIR, PYTHON_DLL, L"");
 
     /* See https://bugs.python.org/issue43022, we need
      * these flags to load the stable ABI.
      */
     HMODULE py_dll = LoadLibraryExW(dll_path, 0, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
     if (!py_dll) {
-        error(L"Could not load Python DLL %ls", dll_path);
+        winerror(L"Could not load Python DLL %ls", dll_path);
     }
-    LocalFree(dll_path);
+    free(dll_path);
 
     Py_Main_t py_main = (Py_Main_t)GetProcAddress(py_dll, "Py_Main");
     if (!py_main) {
-        error(L"Could not locate Py_Main function");
+        winerror(L"Could not locate Py_Main function");
     }
 
     return py_main;
 }
 
 wchar_t *get_python_exe(wchar_t *base_dir) {
-    wchar_t *exe_path;
-    HRESULT hr = PathAllocCombine(
-        base_dir, PYTHON_EXE,
-        PATHCCH_ALLOW_LONG_PATHS, &exe_path
-    );
-    if (hr != S_OK) {
-        error(L"Could not construct Python executable path");
-    }
-    /* Caller should free using LocalFree, but in practice
-     * we don't do so, as we're just transferring control
-     * to the script and then exiting, so process cleanup
-     * will sort it out.
-     */
+    wchar_t *exe_path = make_path(base_dir, PYTHON_DIR, PYTHON_EXE, L"");
     return exe_path;
 }
 
 wchar_t *get_script(wchar_t *base_dir, wchar_t *script_name) {
-    /* Add 10 here for two / characters, an extra w in the extension, plus a bit of padding. */
-    size_t script_size = wcslen(base_dir) + wcslen(SCRIPT_DIR) + wcslen(script_name) + 10;
-    wchar_t *script = malloc(script_size * sizeof(wchar_t));
-    if (script == 0) {
-        error(L"Could not allocate memory for script name");
-    }
-
     /* Try .pyz, .py in base dir, then scripts dir */
     const wchar_t *directories[] = {L"", SCRIPT_DIR, 0};
     const wchar_t *extensions[] = {
@@ -114,37 +127,19 @@ wchar_t *get_script(wchar_t *base_dir, wchar_t *script_name) {
 #endif
     };
 
-    /* Build the name bit by bit, and then check it */
-    wcscpy(script, base_dir);
-    size_t base_len = wcslen(script);
-
     for (const wchar_t **dir = directories; *dir; ++dir) {
-        if ((*dir)[0]) {
-            HRESULT hr = PathCchCombineEx(script, script_size, script, SCRIPT_DIR, PATHCCH_ALLOW_LONG_PATHS);
-            if (hr != S_OK) {
-                error(L"Cannot build name of scripts directory");
-            }
-        }
-        HRESULT hr = PathCchCombineEx(script, script_size, script, script_name, PATHCCH_ALLOW_LONG_PATHS);
-        if (hr != S_OK) {
-            error(L"Cannot build name of scripts directory");
-        }
         for (const wchar_t **ext = extensions; *ext; ++ext) {
-            HRESULT hr = PathCchRenameExtension(script, script_size, *ext);
-            if (hr != S_OK) {
-                error(L"Cannot set script extension");
-            }
+            /* Name is DIR \ SUBDIR \ BASE .EXT */
+            wchar_t *script = make_path(base_dir, *dir, script_name, *ext);
             /* OK, so does this option exist? */
             if (PathFileExistsW(script)) {
                 return script;
             }
+            free(script);
         }
-        /* Reset to the base directory */
-        script[base_len] = 0;
     }
 
-    /* No joy. Free memory and return failure */
-    free(script);
+    /* No joy */
     return 0;
 }
 
@@ -234,39 +229,38 @@ wchar_t *split_exe_name(wchar_t **script_path) {
         ret = GetModuleFileNameW(NULL, exe_name, exe_bufsize);
     }
     if (ret == 0) {
-        error(L"Could not get executable filename");
+        winerror(L"Could not get executable filename");
+    }
+
+    /* Find the directory and basename for the executable */
+    size_t exe_len = wcslen(exe_name);
+    if (exe_len < 4 || exe_name[exe_len-4] != L'.') {
+        error(L"Executable name '%ls' does not end in '.exe'", exe_name);
+    }
+    wchar_t *exe_dir_end = exe_name + (exe_len-4);
+    while (exe_dir_end > exe_name && *exe_dir_end != L'\\') {
+        --exe_dir_end;
+    }
+    if (exe_dir_end <= exe_name) {
+        error(L"Could not locate directory part of '%ls'", exe_name);
     }
 
     /* First of all, check if we have an appended zipfile */
-    wchar_t *exe_leaf = NULL;
     if (has_appended_zip(exe_name)) {
         *script_path = _wcsdup(exe_name);
         if (*script_path == NULL) {
             error(L"Out of memory allocating script path");
         }
-    } else {
-        /* We need to search, so keep the exe basename */
-        exe_leaf = _wcsdup(PathFindFileNameW(exe_name));
-        if (exe_leaf == NULL) {
-            error(L"Out of memory allocating exe leafname");
-        }
+        /* Null-terminate the directory part and return it */
+        *exe_dir_end = 0;
+        return exe_name;
     }
 
-    /* Note: PathCchRemoveFileSpec only respects backslashes,
-     * but exe_name came from a Windows API that returns
-     * backslashes, so we're OK.
-     */
-    HRESULT hr = PathCchRemoveFileSpec(exe_name, exe_bufsize);
-    if (hr != S_OK) {
-        error(L"Could not get executable directory name");
-    }
+    /* Terminate the directory and basename parts */
+    *exe_dir_end = 0;
+    exe_name[exe_len-4] = 0;
 
-    /* If we need to search, do it now */
-    if (exe_leaf) {
-        *script_path = get_script(exe_name, exe_leaf);
-        free(exe_leaf);
-    }
-
+    *script_path = get_script(exe_name, exe_dir_end+1);
     return exe_name;
 }
 
@@ -288,7 +282,7 @@ int wmain()
     }
 
     wchar_t **myargv = malloc((__argc + 2) * sizeof(wchar_t*));
-    myargv[0] = get_python_exe(base_dir); /* __wargv[0]; Python executable - get from embedded dist? */
+    myargv[0] = get_python_exe(base_dir); /* Python executable - get from embedded dist */
     myargv[1] = script;
 
     int i;
@@ -298,5 +292,6 @@ int wmain()
     myargv[1+i] = 0;
 
     Py_Main_t py_main = get_pymain(base_dir);
+    free(base_dir);
     return py_main(__argc+1, myargv);
 }
