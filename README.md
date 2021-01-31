@@ -1,6 +1,19 @@
 A simple Python launcher
 ========================
 
+**Warning** While the approach used in this project is perfectly
+functional, it is clumsy, and somewhat difficult to work with
+in practice. Also, coding in C annoys the heck out of me, as I
+need to write everything myself...
+
+I'm working on a reimplementation of this idea, using Rust as the
+implementation language. That project is currently at https://github.com/pfmoore/pylaunch2,
+but at some point I intend to move it over here, renaming this project to
+pylaunch-legacy. That will disrupt anyone using this version of the code,
+but frankly I don't think anyone is, in practice, so I'm going to
+take the simplest (for me!) approach.
+
+
 The zastub launcher
 -------------------
 
